@@ -83,8 +83,13 @@ class SnowClashGame {
             throwAnim: 0
         };
 
+        this.joystick = { active: false, touchId: null, centerX: 0, centerY: 0, dx: 0, dy: 0, maxRadius: 42 };
+        this.mobileSprinting = false;
+        this.touchAimActive = false;
+
         this.initSnowflakes(160);
         this.setupEventListeners();
+        this.initMobileControls();
         this.setupMap();
 
         this.lastTime = performance.now();
@@ -262,14 +267,144 @@ class SnowClashGame {
 
         window.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        this.canvas.addEventListener('touchstart', (e) => {
-            if (e.touches.length > 0) {
-                const touch = e.touches[0];
-                this.mousePos.x = touch.clientX;
-                this.mousePos.y = touch.clientY;
+    }
+
+    initMobileControls() {
+        const mobileLayer = document.getElementById('mobileControlsLayer');
+        const joystickZone = document.getElementById('joystickZone');
+        const joystickKnob = document.getElementById('joystickKnob');
+        const btnSprint = document.getElementById('btnMobileSprint');
+        const btnCraft = document.getElementById('btnMobileCraft');
+        const btnShoot = document.getElementById('btnMobileShoot');
+
+        if (!joystickZone || !joystickKnob) return;
+
+        // 1. VIRTUAL JOYSTIK HARAKATI (Sensorni chap burchakda ushlab burish)
+        const handleJoystickStart = (e) => {
+            e.preventDefault();
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                if (!this.joystick.active) {
+                    this.joystick.active = true;
+                    this.joystick.touchId = t.identifier;
+                    const rect = joystickZone.getBoundingClientRect();
+                    this.joystick.centerX = rect.left + rect.width / 2;
+                    this.joystick.centerY = rect.top + rect.height / 2;
+                    handleJoystickMove(e);
+                    break;
+                }
+            }
+        };
+
+        const handleJoystickMove = (e) => {
+            if (!this.joystick.active) return;
+            for (let i = 0; i < e.touches.length; i++) {
+                const t = e.touches[i];
+                if (t.identifier === this.joystick.touchId) {
+                    const diffX = t.clientX - this.joystick.centerX;
+                    const diffY = t.clientY - this.joystick.centerY;
+                    const dist = Math.hypot(diffX, diffY);
+                    const angle = Math.atan2(diffY, diffX);
+                    const clampedDist = Math.min(dist, this.joystick.maxRadius);
+
+                    const knobX = Math.cos(angle) * clampedDist;
+                    const knobY = Math.sin(angle) * clampedDist;
+
+                    joystickKnob.style.transform = `translate(calc(-50% + ${knobX}px), calc(-50% + ${knobY}px))`;
+
+                    if (dist > 4) {
+                        this.joystick.dx = Math.cos(angle) * (clampedDist / this.joystick.maxRadius);
+                        this.joystick.dy = Math.sin(angle) * (clampedDist / this.joystick.maxRadius);
+                    } else {
+                        this.joystick.dx = 0;
+                        this.joystick.dy = 0;
+                    }
+                    break;
+                }
+            }
+        };
+
+        const handleJoystickEnd = (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === this.joystick.touchId) {
+                    this.joystick.active = false;
+                    this.joystick.touchId = null;
+                    this.joystick.dx = 0;
+                    this.joystick.dy = 0;
+                    joystickKnob.style.transform = 'translate(-50%, -50%)';
+                    break;
+                }
+            }
+        };
+
+        joystickZone.addEventListener('touchstart', handleJoystickStart, { passive: false });
+        window.addEventListener('touchmove', handleJoystickMove, { passive: false });
+        window.addEventListener('touchend', handleJoystickEnd, { passive: false });
+        window.addEventListener('touchcancel', handleJoystickEnd, { passive: false });
+
+        // 2. TEZ YUGURISH (SPRINT) TUGMASI
+        if (btnSprint) {
+            const toggleSprint = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.mobileSprinting = !this.mobileSprinting;
+                btnSprint.classList.toggle('active', this.mobileSprinting);
+                if (window.soundSystem) window.soundSystem.playSnowStep();
+            };
+            btnSprint.addEventListener('touchstart', toggleSprint, { passive: false });
+            btnSprint.addEventListener('click', toggleSprint);
+        }
+
+        // 3. QOR YASASH (CRAFT) TUGMASI
+        if (btnCraft) {
+            const startCraftTouch = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (this.isRunning && !this.isPaused && !this.localPlayer.isDead) {
+                    this.startCrafting();
+                }
+            };
+            btnCraft.addEventListener('touchstart', startCraftTouch, { passive: false });
+            btnCraft.addEventListener('mousedown', startCraftTouch);
+        }
+
+        // 4. OTISH (SHOOT) TUGMASI
+        if (btnShoot) {
+            const handleShoot = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 if (this.isRunning && !this.isPaused && !this.localPlayer.isDead) {
                     this.throwSnowball();
                 }
+            };
+            btnShoot.addEventListener('touchstart', handleShoot, { passive: false });
+            btnShoot.addEventListener('click', handleShoot);
+        }
+
+        // 5. CANVAS DIRECT TAP-TO-SHOOT (Maydonga to'g'ridan-to'g'ri barmog'i bilan tegib otish)
+        this.canvas.addEventListener('touchstart', (e) => {
+            if (!this.isRunning || this.isPaused || this.localPlayer.isDead) return;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                if (this.joystick.active && t.identifier === this.joystick.touchId) continue;
+                
+                // Joystik yoki tugmalardan tashqaridagi maydonga bosilganda
+                this.mousePos.x = t.clientX;
+                this.mousePos.y = t.clientY;
+                this.touchAimActive = true;
+                this.throwSnowball();
+                setTimeout(() => { this.touchAimActive = false; }, 350);
+            }
+        }, { passive: false });
+
+        this.canvas.addEventListener('touchmove', (e) => {
+            if (!this.isRunning || this.isPaused || this.localPlayer.isDead) return;
+            for (let i = 0; i < e.touches.length; i++) {
+                const t = e.touches[i];
+                if (this.joystick.active && t.identifier === this.joystick.touchId) continue;
+                this.mousePos.x = t.clientX;
+                this.mousePos.y = t.clientY;
+                this.touchAimActive = true;
             }
         }, { passive: false });
     }
@@ -349,6 +484,16 @@ class SnowClashGame {
         this.updateHpUI();
         this.updateSnowballSlotsUI();
         this.updateScoreUI();
+
+        const mobileLayer = document.getElementById('mobileControlsLayer');
+        if (mobileLayer) {
+            const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth <= 1024);
+            if (isTouch) {
+                mobileLayer.classList.add('active');
+            } else {
+                mobileLayer.classList.remove('active');
+            }
+        }
 
         if (this.timerInterval) clearInterval(this.timerInterval);
         this.timerInterval = setInterval(() => {
@@ -612,6 +757,11 @@ class SnowClashGame {
 
         if (p.isCrafting) {
             p.craftProgress++;
+            const ring = document.getElementById('mobileCraftRing');
+            if (ring) {
+                const pct = Math.min(100, Math.round((p.craftProgress / p.craftDuration) * 100));
+                ring.style.background = `conic-gradient(#06d6a0 ${pct}%, transparent 0%)`;
+            }
             if (p.craftProgress >= p.craftDuration) {
                 p.isCrafting = false;
                 p.craftProgress = 0;
@@ -619,9 +769,13 @@ class SnowClashGame {
                     p.snowballs++;
                     this.updateSnowballSlotsUI();
                 }
+                if (ring) ring.style.background = 'none';
             }
             p.isMoving = false;
             return;
+        } else {
+            const ring = document.getElementById('mobileCraftRing');
+            if (ring && p.craftProgress === 0) ring.style.background = 'none';
         }
 
         let dx = 0;
@@ -632,14 +786,20 @@ class SnowClashGame {
         if (this.keys['a'] || this.keys['arrowleft'] || this.keys['keya']) dx -= 1;
         if (this.keys['d'] || this.keys['arrowright'] || this.keys['keyd']) dx += 1;
 
-        if (dx !== 0 && dy !== 0) {
+        // Virtual Joystik harakati
+        if (this.joystick && this.joystick.active && (Math.abs(this.joystick.dx) > 0.05 || Math.abs(this.joystick.dy) > 0.05)) {
+            dx = this.joystick.dx;
+            dy = this.joystick.dy;
+        }
+
+        if (dx !== 0 && dy !== 0 && (!this.joystick || !this.joystick.active)) {
             dx *= 0.7071;
             dy *= 0.7071;
         }
 
-        p.isMoving = (dx !== 0 || dy !== 0);
-        // Shift tugmasi bosilsa SPRINT (Tez yugurish)
-        p.isSprinting = (this.keys['shift'] || this.keys['shiftleft'] || this.keys['shiftright']) && p.isMoving;
+        p.isMoving = (Math.hypot(dx, dy) > 0.08);
+        // Shift tugmasi yoki Mobil Sprint yoqilganda
+        p.isSprinting = ((this.keys['shift'] || this.keys['shiftleft'] || this.keys['shiftright']) || this.mobileSprinting) && p.isMoving;
 
         const currentSpeed = p.isSprinting ? p.sprintSpeed : p.speed;
 
@@ -661,7 +821,14 @@ class SnowClashGame {
             }
         }
 
-        p.angle = Math.atan2(this.mousePos.y - p.y, this.mousePos.x - p.x);
+        // Qahramonning nishon burchagi
+        if (this.touchAimActive) {
+            p.angle = Math.atan2(this.mousePos.y - p.y, this.mousePos.x - p.x);
+        } else if (this.joystick && this.joystick.active && p.isMoving) {
+            p.angle = Math.atan2(dy, dx);
+        } else {
+            p.angle = Math.atan2(this.mousePos.y - p.y, this.mousePos.x - p.x);
+        }
     }
 
     // YERDAGI TANGALARNI TERIB OLISH
@@ -895,6 +1062,16 @@ class SnowClashGame {
         if (this.isGameOver) return;
         this.isGameOver = true;
         this.isRunning = false;
+
+        const mobileLayer = document.getElementById('mobileControlsLayer');
+        if (mobileLayer) mobileLayer.classList.remove('active');
+        if (this.joystick) {
+            this.joystick.active = false;
+            this.joystick.dx = 0;
+            this.joystick.dy = 0;
+            const knob = document.getElementById('joystickKnob');
+            if (knob) knob.style.transform = 'translate(-50%, -50%)';
+        }
 
         const modal = document.getElementById('gameOverModal');
         const title = document.getElementById('gameOverTitle');

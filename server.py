@@ -1,4 +1,4 @@
-# server.py - Qor Jangi (Snow Clash Online) Kengaytirilgan Real-time Multiplayer Server
+﻿# server.py - Qor Jangi (Snow Clash Online) Kengaytirilgan Real-time Multiplayer Server
 import os
 import sys
 import json
@@ -321,6 +321,8 @@ def make_app():
     app.router.add_get('/api/status', api_status)
 
     static_dir = os.path.join(os.path.dirname(__file__), 'static')
+    if not os.path.exists(static_dir):
+        static_dir = os.path.dirname(__file__)
     app.router.add_get('/', lambda req: web.FileResponse(os.path.join(static_dir, 'index.html')))
     app.router.add_static('/', static_dir)
     return app

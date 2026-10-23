@@ -2,9 +2,9 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Qor Jangi - Yangi Yil Shukuhi Online ❄️🎄</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="style.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>❄️</text></svg>">
 </head>
 <body>
@@ -32,6 +32,7 @@
             </div>
 
             <div class="hud-controls interactive">
+                <button class="icon-btn" id="btnFullscreen" title="To'liq ekran (Fullscreen)">⛶</button>
                 <button class="icon-btn" id="btnMusic" title="Musiqa (Yoqish/O'chirish)">🎵</button>
                 <button class="icon-btn" id="btnSfx" title="Ovoz effektlari (Yoqish/O'chirish)">🔊</button>
                 <button class="icon-btn" id="btnPause" title="Pauza (P / Esc)">⏸️</button>
@@ -40,6 +41,38 @@
 
         <!-- Nozik va ixcham Kill Feed (Faqat muhim voqealar) -->
         <div class="kill-feed" id="killFeed"></div>
+
+        <!-- Mobil Sensorli Boshqaruv (Virtual Joystick & Tugmalar) -->
+        <div class="mobile-controls-layer" id="mobileControlsLayer">
+            <!-- Chap tomonda: Virtual Joystik hududi -->
+            <div class="joystick-zone" id="joystickZone">
+                <div class="joystick-base" id="joystickBase">
+                    <div class="joystick-knob" id="joystickKnob"></div>
+                </div>
+            </div>
+
+            <!-- O'ng tomonda: Tezkor Sensorli Tugmalar -->
+            <div class="mobile-actions-zone" id="mobileActionsZone">
+                <!-- Tez yugurish (Sprint) -->
+                <button type="button" class="m-action-btn m-btn-sprint" id="btnMobileSprint" title="Tez yugurish">
+                    <span class="m-btn-icon">⚡</span>
+                    <span class="m-btn-text">SPRINT</span>
+                </button>
+
+                <!-- Qor yasash (Craft) -->
+                <button type="button" class="m-action-btn m-btn-craft" id="btnMobileCraft" title="Qor yasash">
+                    <div class="m-craft-progress-ring" id="mobileCraftRing"></div>
+                    <span class="m-btn-icon">❄️</span>
+                    <span class="m-btn-text">QOR OLISH</span>
+                </button>
+
+                <!-- Qor otish (Shoot) -->
+                <button type="button" class="m-action-btn m-btn-shoot" id="btnMobileShoot" title="Otish">
+                    <span class="m-btn-icon">🎯</span>
+                    <span class="m-btn-text">OTISH</span>
+                </button>
+            </div>
+        </div>
 
         <footer class="hud-bottom">
             <div class="player-status-card interactive">
@@ -494,9 +527,9 @@
         </div>
     </div>
 
-    <script src="js/audio.js"></script>
-    <script src="js/game.js"></script>
-    <script src="js/shop_quests.js"></script>
-    <script src="js/lobby.js"></script>
+    <script src="audio.js"></script>
+    <script src="game.js"></script>
+    <script src="shop_quests.js"></script>
+    <script src="lobby.js"></script>
 </body>
 </html>

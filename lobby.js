@@ -701,6 +701,8 @@ document.addEventListener('DOMContentLoaded', () => {
         closeModal(pauseModal);
         game.isRunning = false;
         if (game.timerInterval) clearInterval(game.timerInterval);
+        const mobileLayer = document.getElementById('mobileControlsLayer');
+        if (mobileLayer) mobileLayer.classList.remove('active');
         mainLobbyScreen.classList.remove('hidden');
     });
 
@@ -721,8 +723,32 @@ document.addEventListener('DOMContentLoaded', () => {
         closeModal(gameOverModal);
         game.isRunning = false;
         if (game.timerInterval) clearInterval(game.timerInterval);
+        const mobileLayer = document.getElementById('mobileControlsLayer');
+        if (mobileLayer) mobileLayer.classList.remove('active');
         mainLobbyScreen.classList.remove('hidden');
     });
+
+    // To'liq ekran (Fullscreen) tugmasi
+    const btnFullscreen = document.getElementById('btnFullscreen');
+    if (btnFullscreen) {
+        btnFullscreen.addEventListener('click', () => {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(() => {});
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                    document.documentElement.webkitRequestFullscreen();
+                }
+                btnFullscreen.textContent = '🗗';
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().catch(() => {});
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+                btnFullscreen.textContent = '⛶';
+            }
+        });
+    }
 
     window.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
