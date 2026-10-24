@@ -279,70 +279,108 @@ class SnowClashGame {
 
         if (!joystickZone || !joystickKnob) return;
 
-        // 1. VIRTUAL JOYSTIK HARAKATI (Sensorni chap burchakda ushlab burish)
-        const handleJoystickStart = (e) => {
-            e.preventDefault();
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                const t = e.changedTouches[i];
-                if (!this.joystick.active) {
-                    this.joystick.active = true;
-                    this.joystick.touchId = t.identifier;
-                    const rect = joystickZone.getBoundingClientRect();
-                    this.joystick.centerX = rect.left + rect.width / 2;
-                    this.joystick.centerY = rect.top + rect.height / 2;
-                    handleJoystickMove(e);
-                    break;
-                }
+        // Ekranga har qanday teginish sodir bo'lganda mobil boshqaruvni yoqish
+        window.addEventListener('touchstart', () => {
+            if (this.isRunning && !this.isGameOver && mobileLayer) {
+                mobileLayer.classList.add('active');
+            }
+        }, { passive: true });
+
+        // 1. JOYSTICK LOGIC (Pointer va Touch to'liq qo'llab-quvvatlanadi)
+        const updateStickPosition = (clientX, clientY) => {
+            if (!this.joystick.active) return;
+            const diffX = clientX - this.joystick.centerX;
+            const diffY = clientY - this.joystick.centerY;
+            const dist = Math.hypot(diffX, diffY);
+            const angle = Math.atan2(diffY, diffX);
+            const clampedDist = Math.min(dist, this.joystick.maxRadius);
+
+            const knobX = Math.cos(angle) * clampedDist;
+            const knobY = Math.sin(angle) * clampedDist;
+
+            joystickKnob.style.transform = `translate(calc(-50% + ${knobX}px), calc(-50% + ${knobY}px))`;
+
+            if (dist > 4) {
+                this.joystick.dx = Math.cos(angle) * (clampedDist / this.joystick.maxRadius);
+                this.joystick.dy = Math.sin(angle) * (clampedDist / this.joystick.maxRadius);
+            } else {
+                this.joystick.dx = 0;
+                this.joystick.dy = 0;
             }
         };
 
-        const handleJoystickMove = (e) => {
+        const handleStickStart = (clientX, clientY, identifier) => {
+            this.joystick.active = true;
+            this.joystick.touchId = identifier;
+            const rect = joystickZone.getBoundingClientRect();
+            this.joystick.centerX = rect.left + rect.width / 2;
+            this.joystick.centerY = rect.top + rect.height / 2;
+            updateStickPosition(clientX, clientY);
+        };
+
+        const handleStickEnd = () => {
+            this.joystick.active = false;
+            this.joystick.touchId = null;
+            this.joystick.dx = 0;
+            this.joystick.dy = 0;
+            joystickKnob.style.transform = 'translate(-50%, -50%)';
+        };
+
+        // Pointer hodisalari
+        joystickZone.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            try { e.target.setPointerCapture(e.pointerId); } catch(err) {}
+            handleStickStart(e.clientX, e.clientY, e.pointerId);
+        });
+
+        window.addEventListener('pointermove', (e) => {
+            if (this.joystick.active && (this.joystick.touchId === null || this.joystick.touchId === e.pointerId)) {
+                updateStickPosition(e.clientX, e.clientY);
+            }
+        });
+
+        window.addEventListener('pointerup', () => {
+            if (this.joystick.active) handleStickEnd();
+        });
+        window.addEventListener('pointercancel', () => {
+            if (this.joystick.active) handleStickEnd();
+        });
+
+        // Touch hodisalari (Safari & mobil brauzerlar)
+        joystickZone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.changedTouches.length > 0) {
+                const t = e.changedTouches[0];
+                handleStickStart(t.clientX, t.clientY, t.identifier);
+            }
+        }, { passive: false });
+
+        window.addEventListener('touchmove', (e) => {
             if (!this.joystick.active) return;
             for (let i = 0; i < e.touches.length; i++) {
                 const t = e.touches[i];
                 if (t.identifier === this.joystick.touchId) {
-                    const diffX = t.clientX - this.joystick.centerX;
-                    const diffY = t.clientY - this.joystick.centerY;
-                    const dist = Math.hypot(diffX, diffY);
-                    const angle = Math.atan2(diffY, diffX);
-                    const clampedDist = Math.min(dist, this.joystick.maxRadius);
-
-                    const knobX = Math.cos(angle) * clampedDist;
-                    const knobY = Math.sin(angle) * clampedDist;
-
-                    joystickKnob.style.transform = `translate(calc(-50% + ${knobX}px), calc(-50% + ${knobY}px))`;
-
-                    if (dist > 4) {
-                        this.joystick.dx = Math.cos(angle) * (clampedDist / this.joystick.maxRadius);
-                        this.joystick.dy = Math.sin(angle) * (clampedDist / this.joystick.maxRadius);
-                    } else {
-                        this.joystick.dx = 0;
-                        this.joystick.dy = 0;
-                    }
+                    updateStickPosition(t.clientX, t.clientY);
                     break;
                 }
             }
-        };
+        }, { passive: false });
 
-        const handleJoystickEnd = (e) => {
+        window.addEventListener('touchend', (e) => {
             for (let i = 0; i < e.changedTouches.length; i++) {
                 if (e.changedTouches[i].identifier === this.joystick.touchId) {
-                    this.joystick.active = false;
-                    this.joystick.touchId = null;
-                    this.joystick.dx = 0;
-                    this.joystick.dy = 0;
-                    joystickKnob.style.transform = 'translate(-50%, -50%)';
+                    handleStickEnd();
                     break;
                 }
             }
-        };
+        });
+        window.addEventListener('touchcancel', () => {
+            handleStickEnd();
+        });
 
-        joystickZone.addEventListener('touchstart', handleJoystickStart, { passive: false });
-        window.addEventListener('touchmove', handleJoystickMove, { passive: false });
-        window.addEventListener('touchend', handleJoystickEnd, { passive: false });
-        window.addEventListener('touchcancel', handleJoystickEnd, { passive: false });
-
-        // 2. TEZ YUGURISH (SPRINT) TUGMASI
+        // 2. SPRINT TUGMASI
         if (btnSprint) {
             const toggleSprint = (e) => {
                 e.preventDefault();
@@ -351,60 +389,57 @@ class SnowClashGame {
                 btnSprint.classList.toggle('active', this.mobileSprinting);
                 if (window.soundSystem) window.soundSystem.playSnowStep();
             };
+            btnSprint.addEventListener('pointerdown', toggleSprint);
             btnSprint.addEventListener('touchstart', toggleSprint, { passive: false });
             btnSprint.addEventListener('click', toggleSprint);
         }
 
-        // 3. QOR YASASH (CRAFT) TUGMASI
+        // 3. CRAFT TUGMASI
         if (btnCraft) {
-            const startCraftTouch = (e) => {
+            const doCraft = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 if (this.isRunning && !this.isPaused && !this.localPlayer.isDead) {
                     this.startCrafting();
                 }
             };
-            btnCraft.addEventListener('touchstart', startCraftTouch, { passive: false });
-            btnCraft.addEventListener('mousedown', startCraftTouch);
+            btnCraft.addEventListener('pointerdown', doCraft);
+            btnCraft.addEventListener('touchstart', doCraft, { passive: false });
+            btnCraft.addEventListener('click', doCraft);
         }
 
-        // 4. OTISH (SHOOT) TUGMASI
+        // 4. SHOOT TUGMASI
         if (btnShoot) {
-            const handleShoot = (e) => {
+            const doShoot = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 if (this.isRunning && !this.isPaused && !this.localPlayer.isDead) {
                     this.throwSnowball();
                 }
             };
-            btnShoot.addEventListener('touchstart', handleShoot, { passive: false });
-            btnShoot.addEventListener('click', handleShoot);
+            btnShoot.addEventListener('pointerdown', doShoot);
+            btnShoot.addEventListener('touchstart', doShoot, { passive: false });
+            btnShoot.addEventListener('click', doShoot);
         }
 
         // 5. CANVAS DIRECT TAP-TO-SHOOT (Maydonga to'g'ridan-to'g'ri barmog'i bilan tegib otish)
+        const handleCanvasTouch = (clientX, clientY) => {
+            if (!this.isRunning || this.isPaused || this.localPlayer.isDead) return;
+            this.mousePos.x = clientX;
+            this.mousePos.y = clientY;
+            this.touchAimActive = true;
+            this.throwSnowball();
+            setTimeout(() => { this.touchAimActive = false; }, 350);
+        };
+
         this.canvas.addEventListener('touchstart', (e) => {
             if (!this.isRunning || this.isPaused || this.localPlayer.isDead) return;
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const t = e.changedTouches[i];
                 if (this.joystick.active && t.identifier === this.joystick.touchId) continue;
-                
-                // Joystik yoki tugmalardan tashqaridagi maydonga bosilganda
-                this.mousePos.x = t.clientX;
-                this.mousePos.y = t.clientY;
-                this.touchAimActive = true;
-                this.throwSnowball();
-                setTimeout(() => { this.touchAimActive = false; }, 350);
-            }
-        }, { passive: false });
-
-        this.canvas.addEventListener('touchmove', (e) => {
-            if (!this.isRunning || this.isPaused || this.localPlayer.isDead) return;
-            for (let i = 0; i < e.touches.length; i++) {
-                const t = e.touches[i];
-                if (this.joystick.active && t.identifier === this.joystick.touchId) continue;
-                this.mousePos.x = t.clientX;
-                this.mousePos.y = t.clientY;
-                this.touchAimActive = true;
+                const target = document.elementFromPoint(t.clientX, t.clientY);
+                if (target && target.closest('.m-action-btn, .joystick-zone, .interactive')) continue;
+                handleCanvasTouch(t.clientX, t.clientY);
             }
         }, { passive: false });
     }
@@ -613,28 +648,69 @@ class SnowClashGame {
         this.createSnowSplash(this.localPlayer.x, this.localPlayer.y, '#ffffff', 8);
     }
 
-    // TEZ VA SHIDDATLI QOR OTISH!
-    throwSnowball() {
+    findNearestEnemy() {
+        let nearest = null;
+        let minDist = 520;
+        for (let [id, p] of this.players) {
+            if (p.id === this.localPlayer.id || p.isDead) continue;
+            if ((this.gameMode === '2v2' || this.gameMode === '4v4') && p.team === this.localPlayer.team) continue;
+            const d = Math.hypot(p.x - this.localPlayer.x, p.y - this.localPlayer.y);
+            if (d < minDist) {
+                minDist = d;
+                nearest = p;
+            }
+        }
+        return nearest;
+    }
+
+    // TEZ VA SHIDDATLI QOR OTISH (AUTO-AIM BILAN MOBIL MOSLASHGAN)
+    throwSnowball(targetAngle = null) {
         if (this.localPlayer.isCrafting || this.localPlayer.isDead) return;
         if (this.localPlayer.throwCooldown > 0) return;
 
         if (this.localPlayer.snowballs <= 0) {
-            this.showKillFeed("❌ Qoringiz qolmadi! [SPACE] bosib yerdan qor oling!", false);
+            this.showKillFeed("❌ Qoringiz qolmadi! Qor yasang yoki oling!", false);
             this.startCrafting();
             return;
         }
 
         this.localPlayer.snowballs--;
-        this.localPlayer.throwCooldown = 11; // Tezkor otish (avval 15 edi)
+        this.localPlayer.throwCooldown = 11;
         this.localPlayer.throwAnim = 8;
         this.updateSnowballSlotsUI();
 
-        const dx = this.mousePos.x - this.localPlayer.x;
-        const dy = this.mousePos.y - this.localPlayer.y;
-        const angle = Math.atan2(dy, dx);
-        const dist = Math.hypot(dx, dy);
-        
-        // QOR TO'PI TEZLIGI - O'rtacha qulay va aniq uchish
+        let angle = targetAngle;
+        let dist = 380;
+
+        if (angle === null) {
+            if (this.touchAimActive) {
+                // Ekranga barmog'i bilan tegilganda
+                const dx = this.mousePos.x - this.localPlayer.x;
+                const dy = this.mousePos.y - this.localPlayer.y;
+                angle = Math.atan2(dy, dx);
+                dist = Math.hypot(dx, dy);
+            } else {
+                // "OTISH" tugmasi bosilganda: Yaqin atrofda dushman bo'lsa Auto-Aim!
+                const nearest = this.findNearestEnemy();
+                if (nearest) {
+                    const edx = nearest.x - this.localPlayer.x;
+                    const edy = nearest.y - this.localPlayer.y;
+                    angle = Math.atan2(edy, edx);
+                    dist = Math.hypot(edx, edy);
+                    this.localPlayer.angle = angle;
+                } else if (this.localPlayer.isMoving || (this.joystick && this.joystick.active)) {
+                    // Harakat yo'nalishiga qarab otish
+                    angle = this.localPlayer.angle;
+                } else {
+                    const dx = this.mousePos.x - this.localPlayer.x;
+                    const dy = this.mousePos.y - this.localPlayer.y;
+                    angle = Math.atan2(dy, dx);
+                    dist = Math.hypot(dx, dy);
+                }
+            }
+        }
+
+        // QOR TO'PI TEZLIGI
         const speed = 15.5;
 
         const snowball = {

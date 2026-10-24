@@ -645,9 +645,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // 10. TEZKOR JANG VA OFFLINE BOT REJIMI
     // -------------------------------------------------------------
     const btnQuickPlay = document.getElementById('btnQuickPlay');
+    const btnMobileQuickPlay = document.getElementById('btnMobileQuickPlay');
     const btnPlayBots = document.getElementById('btnPlayBots');
 
-    btnQuickPlay.addEventListener('click', () => {
+    const startQuickMatch = () => {
         sound.init();
         sound.resume();
         syncAudioButtonsUI();
@@ -661,7 +662,16 @@ document.addEventListener('DOMContentLoaded', () => {
             isMultiplayer: false,
             useBots: true
         });
-    });
+    };
+
+    btnQuickPlay.addEventListener('click', startQuickMatch);
+    if (btnMobileQuickPlay) {
+        btnMobileQuickPlay.addEventListener('click', startQuickMatch);
+        btnMobileQuickPlay.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startQuickMatch();
+        }, { passive: false });
+    }
 
     btnPlayBots.addEventListener('click', () => {
         sound.init();

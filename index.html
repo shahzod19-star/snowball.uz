@@ -42,38 +42,6 @@
         <!-- Nozik va ixcham Kill Feed (Faqat muhim voqealar) -->
         <div class="kill-feed" id="killFeed"></div>
 
-        <!-- Mobil Sensorli Boshqaruv (Virtual Joystick & Tugmalar) -->
-        <div class="mobile-controls-layer" id="mobileControlsLayer">
-            <!-- Chap tomonda: Virtual Joystik hududi -->
-            <div class="joystick-zone" id="joystickZone">
-                <div class="joystick-base" id="joystickBase">
-                    <div class="joystick-knob" id="joystickKnob"></div>
-                </div>
-            </div>
-
-            <!-- O'ng tomonda: Tezkor Sensorli Tugmalar -->
-            <div class="mobile-actions-zone" id="mobileActionsZone">
-                <!-- Tez yugurish (Sprint) -->
-                <button type="button" class="m-action-btn m-btn-sprint" id="btnMobileSprint" title="Tez yugurish">
-                    <span class="m-btn-icon">⚡</span>
-                    <span class="m-btn-text">SPRINT</span>
-                </button>
-
-                <!-- Qor yasash (Craft) -->
-                <button type="button" class="m-action-btn m-btn-craft" id="btnMobileCraft" title="Qor yasash">
-                    <div class="m-craft-progress-ring" id="mobileCraftRing"></div>
-                    <span class="m-btn-icon">❄️</span>
-                    <span class="m-btn-text">QOR OLISH</span>
-                </button>
-
-                <!-- Qor otish (Shoot) -->
-                <button type="button" class="m-action-btn m-btn-shoot" id="btnMobileShoot" title="Otish">
-                    <span class="m-btn-icon">🎯</span>
-                    <span class="m-btn-text">OTISH</span>
-                </button>
-            </div>
-        </div>
-
         <footer class="hud-bottom">
             <div class="player-status-card interactive">
                 <div class="player-info-row">
@@ -103,6 +71,39 @@
                 <span><span class="key-badge">P / Esc</span> Pauza</span>
             </div>
         </footer>
+    </div>
+
+    <!-- Mobil Sensorli Boshqaruv (Virtual Joystick & Tugmalar) -->
+    <div class="mobile-controls-layer" id="mobileControlsLayer">
+        <!-- Chap tomonda: Dinamik Virtual Joystik -->
+        <div class="joystick-zone" id="joystickZone">
+            <div class="joystick-base" id="joystickBase">
+                <div class="joystick-knob" id="joystickKnob"></div>
+            </div>
+            <div class="joystick-guide-text">Harakat</div>
+        </div>
+
+        <!-- O'ng tomonda: Tezkor Sensorli Tugmalar -->
+        <div class="mobile-actions-zone" id="mobileActionsZone">
+            <!-- Tez yugurish (Sprint) -->
+            <button type="button" class="m-action-btn m-btn-sprint" id="btnMobileSprint" title="Tez yugurish">
+                <span class="m-btn-icon">⚡</span>
+                <span class="m-btn-text">TEZ</span>
+            </button>
+
+            <!-- Qor yasash (Craft) -->
+            <button type="button" class="m-action-btn m-btn-craft" id="btnMobileCraft" title="Qor yasash">
+                <div class="m-craft-progress-ring" id="mobileCraftRing"></div>
+                <span class="m-btn-icon">❄️</span>
+                <span class="m-btn-text">QOR</span>
+            </button>
+
+            <!-- Qor otish (Shoot) -->
+            <button type="button" class="m-action-btn m-btn-shoot" id="btnMobileShoot" title="Otish">
+                <span class="m-btn-icon">🎯</span>
+                <span class="m-btn-text">OTISH</span>
+            </button>
+        </div>
     </div>
 
     <!-- =======================================================
@@ -232,6 +233,11 @@
                     <div class="color-circle" style="background: #ffd166;" data-color="#ffd166" title="Oltin Quyosh"></div>
                     <div class="color-circle" style="background: #b5179e;" data-color="#b5179e" title="Bayramona Binafsha"></div>
                 </div>
+
+                <!-- Mobil uchun bevosita qahramon ostidagi Katta Start tugmasi -->
+                <button class="btn-action-big play mobile-hero-play-btn" id="btnMobileQuickPlay">
+                    <span>🚀</span> O'YINNI BOSHLASH
+                </button>
             </div>
 
             <!-- 3. O'ng Ustun: Xona va Amallar Boshqaruvi -->
